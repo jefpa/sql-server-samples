@@ -1,19 +1,31 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
+# Build Pipeline for SQL Database
 
+# De *trigger* geeft aan waardoor deze pipeline automatisch uitgevoerd wordt. In dit geval: een *commit* tegen *master*
 trigger:
 - master
 
+# De *pool* geeft aan van wat voor VM-image gebruik gemaakt moet worden om deze pipeline uit te kunnen voeren. In dit geval dus een image met Visual Studio 2017
 pool:
-  vmImage: 'ubuntu-latest'
+  name: Hosted VS2017
+  demands:
+  - msbuild
+  - visualstudio
 
+# Hier volgende daadwerkelijke "build-stappen". In dit geval hebben we een "eenvoudige" build pipeline - later zullen we kijken naar pipelines met meerdere "stages".
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+- task: VSBuild@1
+  inputs:
+    solution: 'src/sqldatabase/**/*.sln'
+    configuration: 'Release'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+- task: CopyFiles@2
+  inputs:
+    SourceFolder: '$(Build.SourcesDirectory)'
+    Contents: '**/bin/Release/**/*.dacpac'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    flattenFolders: true
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)'
+    artifact: 'SQLDW'
+    publishLocation: 'pipeline'
